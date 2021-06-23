@@ -1,2 +1,2 @@
 # Ignore video folder content
-videos/
+videos/*.mp4
