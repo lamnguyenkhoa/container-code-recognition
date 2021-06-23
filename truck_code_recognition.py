@@ -1,11 +1,43 @@
 import cv2
+import numpy as np
+
+
+def get_bounding_boxes(contours):
+    """
+    Transform contours into list of bounding boxes. Also remove some noise contours.
+    """
+    bounding_boxes = []
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        box = cv2.boundingRect(cnt)
+        if area < 200:
+            continue
+        bounding_boxes.append(box)
+    return bounding_boxes
+
+
+def preprocess_image(src_img, box_outline=True):
+    """
+    Take the image (a frame of video) and process it so other functions can do their job easier.
+    """
+    gray_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
+    _, thresh_img = cv2.threshold(gray_img, 127, 255, 0)
+    blur_img = cv2.blur(thresh_img, (8, 8))
+    contours, _ = cv2.findContours(blur_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    bounding_boxes = get_bounding_boxes(contours)
+    if box_outline:
+        for box in bounding_boxes:
+            x, y, w, h = box[0], box[1], box[2], box[3]
+            cv2.rectangle(src_img, (x, y), (x + w, y + h), color=(0, 255, 0), thickness=2)
+    return thresh_img, src_img
 
 
 def get_truck_wall_code(src_img):
     """
-    Take an image, return the smaller image only contain the truck's container with code. Applied perspective
-    transformation.
+    Take an pre-processed image, return the smaller image only contain the truck's container with code.
+    Then applied perspective transformation to turn it into rectangle shape.
     """
+
     ...
 
 
@@ -36,15 +68,17 @@ def main(filepath):
 
     # Read until video is completed
     cv2.namedWindow('Frame', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Frame', 1280, 720)
+    cv2.resizeWindow('Frame', 1500, 500)
     count = 0
     while cap.isOpened():
         success, frame = cap.read()
         if success:
             # Only take every 10th frame
             if count % 10 == 0:
-                gray_img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('Frame', gray_img)
+                prep_img, draw_img = preprocess_image(frame)
+                prep_img = cv2.cvtColor(prep_img, cv2.COLOR_GRAY2RGB)
+                stacked_img = np.hstack([prep_img, draw_img])
+                cv2.imshow("Frame", stacked_img)
 
             # Press Q on keyboard to  exit
             if cv2.waitKey(10) and 0xFF == ord('q'):
@@ -59,8 +93,8 @@ def main(filepath):
     return truck_codes
 
 
-if __name__ == "__init__":
-    main("video1.mp4")
+if __name__ == "__main__":
+    main("videos/video1.mp4")
 
 # TODO: Detect the biggest contour
 # TODO: Classify is this a truck or not
