@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/TruckCodeRecognition.iml" filepath="$PROJECT_DIR$/.idea/TruckCodeRecognition.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/ContainerCodeRecognition.iml" filepath="$PROJECT_DIR$/.idea/ContainerCodeRecognition.iml" />
     </modules>
   </component>
 </project>
