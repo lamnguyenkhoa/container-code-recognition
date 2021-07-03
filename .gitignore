@@ -1,2 +1,5 @@
 # Ignore video folder content
 videos/*.mp4
+
+# Ignore training data
+dataset/
