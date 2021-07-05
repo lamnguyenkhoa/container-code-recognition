@@ -22,50 +22,55 @@ def rotate_image(image, angle):
     return result
 
 
-def skew_image(src_img):
+def is_contour_bad(c, src_img):
+    im_h, im_w = src_img.shape[0:2]
+    box = cv2.boundingRect(c)
+    x, y, w, h = box[0], box[1], box[2], box[3]
+    if h >= 0.8*im_h:  # likely to be a bar
+        print("found a bar contour")
+        return True
+    if x < 0.4*im_w and y > 0.6*im_h:  # lower left unrelated symbols
+        print("found a unrelated contour")
+        return True
+    if w*h < 0.001*im_h*im_w:  # Noise
+        print("found a tiny noise contour")
+        return True
+    return False
+
+
+def bbwt_threshold(src_img):
+    """
+    Turn image into binary color: Black Background White Text.
+    Require original colored image.
+    """
     gray_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
     avg_color_per_row = np.average(gray_img, axis=0)
     avg_color = np.average(avg_color_per_row, axis=0)
     if avg_color > 127:
         print("This is a bright image")
-        _, thresh_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY_INV)
+        ret, thresh_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY_INV)
     else:
         print("This is a dark image")
-        _, thresh_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)
-    lines = cv2.HoughLines(thresh_img)
+        ret, thresh_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)
     return thresh_img
-
-
-def is_contour_bad(c, src_img):
-    im_h, im_w = src_img.shape[0:2]
-    box = cv2.boundingRect(c)
-    x, y, w, h = box[0], box[1], box[2], box[3]
-    if h >= 0.8*im_h:  # likely to be middle bar
-        return True
-    if x < 0.4*im_w and y > 0.6*im_h:  # lower left unrelated symbols
-        return True
-    return False
 
 
 def cleanup_backcode_image(src_img, visual=False):
     """
     Clean up other cluttering on the back code and return a threshold image.
     """
-    gray = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
+    thresh = bbwt_threshold(src_img)
     cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     mask = np.ones(src_img.shape[:2], dtype="uint8") * 255
     # loop over the contours
     # cv2.drawContours(src_img, cnts, -1, (0, 255, 0), 1)
-    print(src_img.shape)
+    print("Image shape:", src_img.shape)
     for c in cnts:
         box = cv2.boundingRect(c)
         x, y, w, h = box[0], box[1], box[2], box[3]
-        #print(x, y, w, h)
         cv2.rectangle(src_img, (x, y), (x + w, y + h), color=(0, 255, 0), thickness=1)
         # if the contour is bad, draw it on the mask
         if is_contour_bad(c, src_img):
-            print("found a bad contour")
             cv2.drawContours(mask, [c], -1, 0, -1)
     # remove the contours from the image and show the resulting images
     result = cv2.bitwise_and(thresh, thresh, mask=mask)
@@ -78,7 +83,8 @@ def cleanup_backcode_image(src_img, visual=False):
 
 
 def main():
-    src_img = cv2.imread("images/code1.png")
+    # Test cleanup ability
+    src_img = cv2.imread("images/code2.png")
     clean_img = cleanup_backcode_image(src_img)
     display_image_cv2(clean_img, "result", False)
 
