@@ -22,7 +22,7 @@ def is_contour_bad(c, src_img):
         if x < 0.4*im_w and y > 0.6*im_h:  # lower left unrelated symbols
             print("found a unrelated contour")
             return True
-        if w*h < 0.005*im_h*im_w:  # Noise w/ area < 0.5% of image's area
+        if w*h < 0.003*im_h*im_w:  # Noise w/ area < 0.5% of image's area
             print("found a tiny noise contour")
             return True
     # Else, it a side code
