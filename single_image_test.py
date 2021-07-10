@@ -20,8 +20,8 @@ def main():
     """
     Test recognition ability on a single image. Only used for testing
     """
-    src_img = cv2.imread("images/ocr_test.png")
-    clean_img = image_processing.cleanup_backcode_image(src_img)
+    src_img = cv2.imread("images/code2.png")
+    clean_img = image_processing.process_image_for_ocr(src_img)
     clean_img = cv2.bitwise_not(clean_img)
     clean_img = cv2.blur(clean_img, (2, 2))
     res = ocr.find_code_in_image(clean_img)

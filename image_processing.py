@@ -3,11 +3,31 @@ import numpy as np
 from utils import display_image_cv2
 
 
-def rotate_image(image, angle):
-    image_center = tuple(np.array(image.shape[1::-1]) / 2)
-    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-    return result
+def rotate_image(thresh_img):
+    """ Rotate an image. Required input to be a binary image."""
+    im_h, im_w = thresh_img.shape[0:2]
+    if im_h > im_w:
+        # Not yet implemented for vertical side code
+        return thresh_img
+
+    coords = np.column_stack(np.where(thresh_img > 0))
+    angle = cv2.minAreaRect(coords)[-1]
+    # the `cv2.minAreaRect` function returns values in the
+    # range [-90, 0); as the rectangle rotates clockwise the
+    # returned angle trends to 0 -- in this special case we
+    # need to add 90 degrees to the angle
+    if angle < -45:
+        angle = -(90 + angle)
+    # otherwise, just take the inverse of the angle to make
+    # it positive
+    else:
+        angle = -angle
+    # rotate the image
+    (h, w) = thresh_img.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(thresh_img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    return rotated
 
 
 def is_contour_bad(c, src_img):
@@ -36,11 +56,30 @@ def is_contour_bad(c, src_img):
     return False
 
 
+def remove_noise(cnts, thresh, src_img, visual):
+    mask = np.ones(thresh.shape[:2], dtype="uint8") * 255
+    # loop over the contours
+    for c in cnts:
+        # Draw contour for visualization
+        if visual:
+            box = cv2.boundingRect(c)
+            x, y, w, h = box[0], box[1], box[2], box[3]
+            cv2.rectangle(src_img, (x, y), (x + w, y + h), color=(0, 255, 0), thickness=1)
+        # if the contour is bad, draw it on the mask (to remove it later)
+        if is_contour_bad(c, src_img):
+            cv2.drawContours(mask, [c], -1, 0, -1)
+    # remove the contours from the image and show the resulting images
+    result = cv2.bitwise_and(thresh, thresh, mask=mask)
+    return result
+
+
 def otsu_threshold(src_img):
     """ NOT expected to return white text on black background"""
     gray_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
     # blur_img = cv2.GaussianBlur(gray_img, (3, 3), 0)
-    _, thresh_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    _, thresh_img1 = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    thresh_img2 = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 19, 17)
+    thresh_img = cv2.bitwise_and(thresh_img1, thresh_img2)
     return thresh_img
 
 
@@ -53,43 +92,35 @@ def is_it_bbwt(thresh_img, depth=2):
     center_pixel_value = np.sum(center_img)
     border_bw_value = (total_pixel_value - center_pixel_value) / (im_h*im_w - center_img.size)
     print("BBWT value:", border_bw_value)
-    return border_bw_value > 127  # If True mean not bbwt, and thresh must be invert
+    return border_bw_value < 127  # If False mean not bbwt, and thresh must be invert
 
 
-def cleanup_backcode_image(src_img, visual=False):
+def process_image_for_ocr(src_img, visual=False):
     """
     Clean up other cluttering on the back code and return a threshold image.
     """
     print("Image shape:", src_img.shape)
+    # Binarization
     thresh = otsu_threshold(src_img)
-    if is_it_bbwt(thresh):
+    if not is_it_bbwt(thresh):
         cv2.bitwise_not(thresh, thresh)  # invert
     cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    mask = np.ones(src_img.shape[:2], dtype="uint8") * 255
-    # loop over the contours
-    # cv2.drawContours(src_img, cnts, -1, (0, 255, 0), 1)
-    for c in cnts:
-        # Draw contour for visualization
-        if visual:
-            box = cv2.boundingRect(c)
-            x, y, w, h = box[0], box[1], box[2], box[3]
-            cv2.rectangle(src_img, (x, y), (x + w, y + h), color=(0, 255, 0), thickness=1)
-        # if the contour is bad, draw it on the mask (to remove it later)
-        if is_contour_bad(c, src_img):
-            cv2.drawContours(mask, [c], -1, 0, -1)
-    # remove the contours from the image and show the resulting images
-    result = cv2.bitwise_and(thresh, thresh, mask=mask)
+    # Remove noise
+    clean = remove_noise(cnts, thresh, src_img, visual)
+    # Rotate
+    rotated = rotate_image(clean)
     if visual:
         display_image_cv2(src_img, "original w/ box")
         display_image_cv2(thresh, "thresh")
-        display_image_cv2(result, "result")
-    return result
+        display_image_cv2(clean, "removed noise")
+        display_image_cv2(rotated, "rotated")
+    return rotated
 
 
 def main():
     # Test threshold and cleanup ability
-    src_img = cv2.imread("images/code4.png")
-    clean_img = cleanup_backcode_image(src_img, True)
+    src_img = cv2.imread("images/code5_fix.png")
+    clean_img = process_image_for_ocr(src_img, True)
 
 
 if __name__ == "__main__":
