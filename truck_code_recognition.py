@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from image_processing import preprocess_image
+
 
 def main(filepath):
     truck_codes = []
@@ -21,10 +21,7 @@ def main(filepath):
         if success:
             # Only take every 10th frame
             if count % 10 == 0:
-                prep_img, draw_img = preprocess_image(frame)
-                prep_img = cv2.cvtColor(prep_img, cv2.COLOR_GRAY2RGB)
-                stacked_img = np.hstack([prep_img, draw_img])
-                cv2.imshow("Frame", stacked_img)
+                cv2.imshow("Frame", frame)
 
             # Press Q on keyboard to  exit
             if cv2.waitKey(10) and 0xFF == ord('q'):
@@ -42,6 +39,6 @@ def main(filepath):
 if __name__ == "__main__":
     main("videos/video1.mp4")
 
-# TODO: Use YOLO to train and detect container's back face
-# TODO: Apply perspective transform into a normal square shape
+# TODO: Use YOLO to train and detect back code and side code on container
+# TODO: Process image the code part
 # TODO: Apply OCR on it

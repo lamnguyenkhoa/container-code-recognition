@@ -36,6 +36,8 @@ def error_check(formatted_code):
             fixed_code[14] = '1'
         else:
             print("Bad images or it isn't BIC code")
+            print("Character 15th detected as", fixed_code[14], "and has been fixed.")
+            fixed_code[14] = '1'
     fixed_code = "".join(fixed_code)
     return fixed_code
 
