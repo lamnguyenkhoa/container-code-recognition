@@ -4,6 +4,9 @@ videos/*.mp4
 # Ignore training data
 dataset/
 
+# Ignore YOLO .weights file
+*.weights
+
 # Byte-compiled / optimized / DLL files
 *.py[cod]
 *$py.class
