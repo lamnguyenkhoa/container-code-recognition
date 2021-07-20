@@ -20,7 +20,7 @@ def main(filepath):
         success, frame = cap.read()
         if success:
             # Only take every 10th frame
-            if count % 10 == 0:
+            if count % 4 == 0:
                 cv2.imshow("Frame", frame)
 
             # Press Q on keyboard to  exit

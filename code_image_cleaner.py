@@ -3,30 +3,40 @@ import numpy as np
 from utils import display_image_cv2
 
 
-def rotate_image(thresh_img):
+def rotate_image(thresh_img, debug=False):
     """ Rotate an image. Required input to be a binary image."""
+    display_image_cv2(thresh_img)
     im_h, im_w = thresh_img.shape[0:2]
     if im_h > im_w:
         # Not yet implemented for vertical side code
+        print("code_image_cleaner/rotate_image(): Not yet implemented for vertical side code")
         return thresh_img
 
-    coords = np.column_stack(np.where(thresh_img > 0))
-    angle = cv2.minAreaRect(coords)[-1]
-    # the `cv2.minAreaRect` function returns values in the
-    # range [-90, 0); as the rectangle rotates clockwise the
-    # returned angle trends to 0 -- in this special case we
-    # need to add 90 degrees to the angle
-    if angle < -45:
-        angle = -(90 + angle)
-    # otherwise, just take the inverse of the angle to make
-    # it positive
-    else:
-        angle = -angle
+    tmp = np.where(thresh_img > 0)
+    row, col = tmp
+    # note: column_stack is just vstack().T (aka transposed vstack)
+    coords = np.column_stack((col, row))
+    rect = cv2.minAreaRect(coords)
+    angle = rect[-1]
+    if debug:
+        box_points = cv2.boxPoints(rect)
+        box_points = np.int0(box_points)
+        debug_box_img = cv2.drawContours(thresh_img.copy(), [box_points], 0, (255, 255, 255), 2)
+        display_image_cv2(debug_box_img, "debug box rotate", False)
+    # the v4.5.1 `cv2.minAreaRect` function returns values in the
+    # range (0, 90]); as the rectangle rotates clockwise the
+    # returned angle approach 90.
+    if angle > 45:
+        # if angle > 45 it will rotate left 90 degree into vertical standing form, so rotate another 270 degree
+        # will bring it back to good. Otherwise, it will rotate nice.
+        angle = 270 + angle
+
     # rotate the image
     (h, w) = thresh_img.shape[:2]
     center = (w // 2, h // 2)
     M = cv2.getRotationMatrix2D(center, angle, 1.0)
     rotated = cv2.warpAffine(thresh_img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    print("code_image_cleaner/rotate_image(): rotated", angle)
     return rotated
 
 
@@ -37,31 +47,36 @@ def is_contour_bad(c, src_img):
     # If image is a back code (width larger than height)
     if im_w > im_h:
         if h >= 0.8*im_h:  # likely to be a bar
-            print("found a bar contour")
+            print("code_image_cleaner/is_contour_bad(): found a bar contour")
             return True
         if x < 0.4*im_w and y > 0.6*im_h:  # lower left unrelated symbols
-            print("found a unrelated contour")
+            print("code_image_cleaner/is_contour_bad(): found a unrelated contour")
             return True
         if w*h < 0.003*im_h*im_w:  # Noise w/ area < 0.5% of image's area
-            print("found a tiny noise contour")
+            print("code_image_cleaner/is_contour_bad(): found a tiny noise contour")
             return True
+        if x <= 1 or x >= (im_w-1) or y <= 1 or y <= (im_h-1):
+            if w*h < 0.005*im_h*im_w:
+                print("code_image_cleaner/is_contour_bad(): found a sus edge-touched contour")
+                return True
     # Else, it a side code
     else:
         if w*h < 0.001*im_h*im_w:  # Noise
-            print("found a tiny noise contour")
+            print("code_image_cleaner/is_contour_bad(): found a tiny noise contour")
             return True
         if x+w >= 0.5*im_w and y+h >= 0.4*im_h:
-            print("found a unrelated contour")
+            print("code_image_cleaner/is_contour_bad(): found a unrelated contour")
             return True
     return False
 
 
-def remove_noise(cnts, thresh, src_img, visual):
+def remove_noise(cnts, thresh, src_img, debug=False):
+    print("===Start removing noise===")
     mask = np.ones(thresh.shape[:2], dtype="uint8") * 255
     # loop over the contours
     for c in cnts:
         # Draw contour for visualization
-        if visual:
+        if debug:
             box = cv2.boundingRect(c)
             x, y, w, h = box[0], box[1], box[2], box[3]
             cv2.rectangle(src_img, (x, y), (x + w, y + h), color=(0, 255, 0), thickness=1)
@@ -70,6 +85,7 @@ def remove_noise(cnts, thresh, src_img, visual):
             cv2.drawContours(mask, [c], -1, 0, -1)
     # remove the contours from the image and show the resulting images
     result = cv2.bitwise_and(thresh, thresh, mask=mask)
+    print("=====Finish=====")
     return result
 
 
@@ -91,25 +107,24 @@ def is_it_bbwt(thresh_img, depth=2):
     center_img = thresh_img[depth:im_h-depth, depth:im_w-depth]
     center_pixel_value = np.sum(center_img)
     border_bw_value = (total_pixel_value - center_pixel_value) / (im_h*im_w - center_img.size)
-    print("BBWT value:", border_bw_value)
+    print("code_image_cleaner/is_it_bbwt():BBWT value:", border_bw_value)
     return border_bw_value < 127  # If False mean not bbwt, and thresh must be invert
 
 
-def process_image_for_ocr(src_img, visual=False):
+def process_image_for_ocr(src_img, debug=False):
     """
-    Clean up other cluttering on the back code and return a threshold image.
+    Clean up other cluttering on the back code and return a binary image. Run this from other file.
     """
-    print("Image shape:", src_img.shape)
     # Binarization
     thresh = otsu_threshold(src_img)
     if not is_it_bbwt(thresh):
         cv2.bitwise_not(thresh, thresh)  # invert
     cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # Remove noise
-    clean = remove_noise(cnts, thresh, src_img, visual)
+    clean = remove_noise(cnts, thresh, src_img, debug)
     # Rotate
     rotated = rotate_image(clean)
-    if visual:
+    if debug:
         display_image_cv2(src_img, "original w/ box")
         display_image_cv2(thresh, "thresh")
         display_image_cv2(clean, "removed noise")
@@ -118,7 +133,7 @@ def process_image_for_ocr(src_img, visual=False):
 
 
 def main():
-    # Test threshold and cleanup ability
+    """ Test threshold and cleanup ability """
     src_img = cv2.imread("images/code5_fix.png")
     clean_img = process_image_for_ocr(src_img, True)
 
