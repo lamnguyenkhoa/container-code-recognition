@@ -1,44 +1,52 @@
 import cv2
+import argparse
 import numpy as np
+from code_region_detector import build_model, detect
+from single_frame_process import get_code_and_draw
 
 
-def main(filepath):
-    truck_codes = []
-    # Create a VideoCapture object and read from input file
-    # If the input is the camera, pass 0 instead of the video file name
-    cap = cv2.VideoCapture(filepath)
+def argument_parser():
+    """ Handle command line arguments """
+    ap = argparse.ArgumentParser()
+    ap.add_argument('-v', '--video', default='videos/video1.mp4', help='path to input video')
+    ap.add_argument('-c', '--config', default='yolov4.cfg', help='path to yolo config file')
+    ap.add_argument('-w', '--weights', default='yolov4.weights', help='path to yolo pre-trained weights')
+    ap.add_argument('-cl', '--classes', default='yolov4.txt', help='path to text file containing class names')
+    args = vars(ap.parse_args())
+    return args
 
-    # Check if camera opened successfully
+
+def main(args):
+    cap = cv2.VideoCapture(args['video'])
     if not cap.isOpened():
-        print("Error opening video stream or file")
+        print("truck_code_ocr/main(): Error opening video stream or file")
 
     # Read until video is completed
-    cv2.namedWindow('Frame', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Frame', 1500, 500)
+    cv2.namedWindow('Output frame', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Output frame', 1500, 800)
     count = 0
     while cap.isOpened():
         success, frame = cap.read()
         if success:
-            # Only take every 10th frame
+            # Only take every 4th frame
             if count % 4 == 0:
-                cv2.imshow("Frame", frame)
+                # Detect code and recognize it here
+                net, classes = build_model(args['classes'], args['weights'], args['config'])
+                class_ids, boxes, _ = detect(net, frame)
+                frame, codes = get_code_and_draw(frame, class_ids, classes, boxes)
+                cv2.imshow("Output frame", frame)
 
             # Press Q on keyboard to  exit
             if cv2.waitKey(10) and 0xFF == ord('q'):
                 break
             count += 1
-        # Break the loop
         else:
             break
     # When everything done, release the video capture object
     cap.release()
     cv2.destroyAllWindows()
-    return truck_codes
 
 
 if __name__ == "__main__":
-    main("videos/video1.mp4")
-
-# TODO: Use YOLO to train and detect back code and side code on container
-# TODO: Process image the code part
-# TODO: Apply OCR on it
+    arguments = argument_parser()
+    main(arguments)

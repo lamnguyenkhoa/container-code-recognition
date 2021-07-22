@@ -5,7 +5,8 @@ from utils import display_image_cv2
 
 def rotate_image(thresh_img, debug=False):
     """ Rotate an image. Required input to be a binary image."""
-    display_image_cv2(thresh_img)
+    if debug:
+        display_image_cv2(thresh_img, "prerotate")
     im_h, im_w = thresh_img.shape[0:2]
     if im_h > im_w:
         # Not yet implemented for vertical side code
