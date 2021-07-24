@@ -1,8 +1,6 @@
 import cv2
 import argparse
-import numpy as np
-from code_region_detector import build_model, detect
-from single_frame_process import get_code_and_draw
+from code_region_detector import build_model, detect, draw_all_bounding_boxes
 
 
 def argument_parser():
@@ -25,15 +23,18 @@ def main(args):
     cv2.namedWindow('Output frame', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('Output frame', 1500, 800)
     count = 0
+    net, classes, output_layers = build_model(args['classes'], args['weights'], args['config'])
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
     while cap.isOpened():
         success, frame = cap.read()
         if success:
-            # Only take every 4th frame
-            if count % 4 == 0:
+            # Only take every 2th frame
+            if count % 2 == 0:
                 # Detect code and recognize it here
-                net, classes = build_model(args['classes'], args['weights'], args['config'])
-                class_ids, boxes, _ = detect(net, frame)
-                frame, codes = get_code_and_draw(frame, class_ids, classes, boxes)
+                class_ids, boxes, confidences = detect(net, frame, output_layers)
+                draw_all_bounding_boxes(frame, boxes, class_ids, confidences, classes)
+                # frame, codes = get_code_and_draw(frame, class_ids, classes, boxes)
                 cv2.imshow("Output frame", frame)
 
             # Press Q on keyboard to  exit

@@ -14,6 +14,12 @@ def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h, class
     cv2.putText(img, label, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
+def draw_all_bounding_boxes(frame, boxes, class_ids, confidences, classes):
+    for i in range(len(boxes)):
+        x, y, w, h = boxes[i]
+        draw_bounding_box(frame, class_ids[i], confidences[i], round(x), round(y), round(x + w), round(y + h), classes)
+
+
 def build_model(classes_path='yolov4.txt', weights_path='yolov4.weights', config_path='yolov4.cfg'):
     # read class names from text file
     with open(classes_path, 'r') as f:
@@ -22,10 +28,12 @@ def build_model(classes_path='yolov4.txt', weights_path='yolov4.weights', config
     # read pre-trained model and config file to create the network
     print("code_region_detector/build_model(): loading YOLO from disk...")
     net = cv2.dnn.readNet(weights_path, config_path)
-    return net, classes
+    layer_names = net.getLayerNames()  # Ex: conv_25, bn_25, relu_25, conv_26 ... yolo_106
+    output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]  # Get the yolo layer
+    return net, classes, output_layers
 
 
-def detect(net, frame):
+def detect(net, frame, output_layers):
     """
     Return class id, confidence scores and bounding boxes for detected object (after NMS).
     This function is the same as using following built-in opencv functions:
@@ -41,15 +49,13 @@ def detect(net, frame):
     CONFIDENCE_THRESHOLD = 0.5
     NMS_THRESHOLD = 0.4
     scale = 1/255
-    size = (416, 416)
+    size = (320, 320)
     # create input blob to prepare image for the network
     blob = cv2.dnn.blobFromImage(frame, scalefactor=scale, size=size, mean=(0, 0, 0), swapRB=True, crop=False)
     net.setInput(blob)
     im_h, im_w = frame.shape[0:2]
     # run inference through the network and gather predictions from output layers
     start = time.time()
-    layer_names = net.getLayerNames()  # Ex: conv_25, bn_25, relu_25, conv_26 ... yolo_106
-    output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]  # Get the yolo layer
     outs = net.forward(output_layers)
     end = time.time()
     print("code_region_detector/detect(): YOLOv4 took {:.6f} seconds".format(end - start))
@@ -89,16 +95,14 @@ def detect(net, frame):
 def main():
     """ Used for testing """
     image = cv2.imread('images/container1.png')
-    net, classes = build_model()
+    net, classes, output_layers = build_model()
 
     # get NMS-ed result from detection
-    class_ids, boxes, confidences = detect(net, image)
+    class_ids, boxes, confidences = detect(net, image, output_layers)
 
     # draw it on the image
-    for i in range(len(boxes)):
-        x, y, w, h = boxes[i]
-        draw_bounding_box(image, class_ids[i], confidences[i], round(x), round(y),
-                          round(x + w), round(y + h), classes)
+    draw_all_bounding_boxes(image, boxes, class_ids, confidences, classes)
+
     cv2.imshow("object detection", image)
     cv2.waitKey()
     cv2.imwrite("object_detection.jpg", image)
