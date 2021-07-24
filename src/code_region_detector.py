@@ -94,7 +94,7 @@ def detect(net, frame, output_layers):
 
 def main():
     """ Used for testing """
-    image = cv2.imread('images/container1.png')
+    image = cv2.imread('../images/container1.png')
     net, classes, output_layers = build_model()
 
     # get NMS-ed result from detection

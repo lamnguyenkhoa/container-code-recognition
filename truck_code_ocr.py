@@ -1,6 +1,6 @@
 import cv2
 import argparse
-from code_region_detector import build_model, detect, draw_all_bounding_boxes
+from src.code_region_detector import build_model, detect, draw_all_bounding_boxes
 
 
 def argument_parser():

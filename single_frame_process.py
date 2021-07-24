@@ -1,9 +1,9 @@
 import cv2
-import ocr
+from src import ocr
 import argparse
-from code_region_detector import build_model, detect
-from code_image_cleaner import process_image_for_ocr
-from utils import display_image_cv2, resize_to_suitable
+from src.code_region_detector import build_model, detect
+from src.code_image_cleaner import process_image_for_ocr
+from src.utils import display_image_cv2, resize_to_suitable
 
 
 def argument_parser():

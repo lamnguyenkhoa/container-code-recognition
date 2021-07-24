@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from utils import display_image_cv2
+from src.utils import display_image_cv2
 
 
 def rotate_image(thresh_img, debug=False):
@@ -135,7 +135,7 @@ def process_image_for_ocr(src_img, debug=False):
 
 def main():
     """ Test threshold and cleanup ability """
-    src_img = cv2.imread("images/code5_fix.png")
+    src_img = cv2.imread("../images/code5_fix.png")
     clean_img = process_image_for_ocr(src_img, True)
 
 
