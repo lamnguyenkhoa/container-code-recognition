@@ -45,6 +45,8 @@ def get_code_and_draw(frame, class_ids, classes, boxes, debug=False):
         x, y, w, h = boxes[i]
         crop_img = frame[round(y):round(y+h), round(x):round(x+w)]
         print("single_frame_process/get_code_and_draw(): cropped image shape", crop_img.shape)
+        if crop_img.shape[0] == 0 or crop_img.shape[1] == 0:
+            continue
         crop_img = resize_to_suitable(crop_img)
         print("single_frame_process/get_code_and_draw(): resized image shape", crop_img.shape)
         if debug:
@@ -67,8 +69,11 @@ def main(args):
     """
     src_img = cv2.imread(args['image'])
     # Build model and detect code region
-    net, classes = build_model(args['classes'], args['weights'], args['config'])
-    class_ids, boxes, confidences = detect(net, src_img)
+    net, classes, output_layers = build_model(args['classes'], args['weights'], args['config'])
+    # For some reason, enable CUDA make single image detect slower?
+    # net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    # net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+    class_ids, boxes, confidences = detect(net, src_img, output_layers)
     src_img, _ = get_code_and_draw(src_img, class_ids, classes, boxes, debug=True)
     display_image_cv2(src_img, "final")
     cv2.imwrite("output.jpg", src_img)

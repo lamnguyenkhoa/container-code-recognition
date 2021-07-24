@@ -3,6 +3,8 @@ import cv2
 
 def resize_to_suitable(img, min_dim=400):
     old_h, old_w = img.shape[0:2]
+    if old_w == 0 or old_h == 0:
+        return img
     new_h, new_w = old_h, old_w
     if old_w > old_h:
         while new_w < min_dim:
