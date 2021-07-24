@@ -1,13 +1,15 @@
 # Container Code Recognition
 
 This project will take a video or an image and used YOLOv4 Object detection
-to detect the container codes (on the back or side of the container) and used
-OCR to read it into text.
+to detect the container codes (on the back or side of the container) and used OCR to read it into text.
 
-Status: Currently, only work on single image.
+Plan for improvement:
+
+- Train a better YOLO model.
+- Improve the OCR function.
 
 If installed opencv with CUDA-enabled, the program will run faster. It still run
-without CUDA/GPU, but slower, take ~0.5 second for a image.
+without CUDA/GPU, but slower, take ~0.5 second for an image.
 
 ## How to run
 
@@ -19,8 +21,13 @@ To run on a single image, use command:
 Example: `python single_frame_process -i images\container1.png -c yolov4.cfg
 -w yolov4.weights -cl yolov4.txt`
 
+To run on a video, use command:
+
+`python truck_code_ocr -v path\to\video -c path\to\config
+-w path\to\weights -cl path\to\classname`
+
 Note: If not given arguments, they will take the default value, which is
-demo_input.jpg for -i and yolov4.* file for -c, -w and -cl .
+demo_input.jpg for -i, videos/video1.mp4 for -v and yolov4.* file for -c, -w and -cl.
 
 ## Required file
 
@@ -32,6 +39,6 @@ and 4 test images with 1000 iterations using darknet.
 
 <https://drive.google.com/file/d/18VLouk68J13xmc_AVwiKE8nIRUAFnl5T/view?usp=sharing>
 
-### Example output
+## Example output
 
 ![Output example](./output.jpg?raw=true "Output example")
