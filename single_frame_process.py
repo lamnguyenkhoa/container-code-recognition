@@ -43,7 +43,8 @@ def get_code_and_draw(frame, class_ids, classes, boxes, debug=False):
             print("single_frame_process/get_code_and_draw(): sidecode not working yet!")
             continue
         x, y, w, h = boxes[i]
-        crop_img = frame[round(y):round(y+h), round(x):round(x+w)]
+        extra_pix = 2  # Get a bit bigger crop to make sure we cover everything
+        crop_img = frame[round(y)-extra_pix:round(y+h)+extra_pix, round(x)-extra_pix:round(x+w)+extra_pix]
         print("single_frame_process/get_code_and_draw(): cropped image shape", crop_img.shape)
         if crop_img.shape[0] == 0 or crop_img.shape[1] == 0:
             continue
@@ -51,7 +52,7 @@ def get_code_and_draw(frame, class_ids, classes, boxes, debug=False):
         print("single_frame_process/get_code_and_draw(): resized image shape", crop_img.shape)
         if debug:
             display_image_cv2(crop_img, "cropped code image")
-        clean_img = process_image_for_ocr(crop_img)
+        clean_img = process_image_for_ocr(crop_img, debug)
         clean_img = cv2.bitwise_not(clean_img)
         clean_img = cv2.blur(clean_img, (2, 2))
         res = ocr.find_code_in_image(clean_img)
