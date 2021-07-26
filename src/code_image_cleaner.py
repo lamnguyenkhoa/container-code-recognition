@@ -36,7 +36,7 @@ def rotate_image(thresh_img, debug=False):
     (h, w) = thresh_img.shape[:2]
     center = (w // 2, h // 2)
     M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated = cv2.warpAffine(thresh_img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    rotated = cv2.warpAffine(thresh_img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT)
     print("code_image_cleaner/rotate_image(): rotated", angle)
     return rotated
 
@@ -47,17 +47,18 @@ def is_contour_bad(c, src_img):
     x, y, w, h = box[0], box[1], box[2], box[3]
     # If image is a back code (width larger than height)
     if im_w > im_h:
-        if h >= 0.8*im_h:  # likely to be a bar
+        if h >= 0.6*im_h:  # likely to be a bar
             print("code_image_cleaner/is_contour_bad(): found a bar contour")
             return True
         if x < 0.4*im_w and y > 0.6*im_h:  # lower left unrelated symbols
             print("code_image_cleaner/is_contour_bad(): found a unrelated contour")
             return True
-        if w*h < 0.003*im_h*im_w:  # Noise w/ area < 0.5% of image's area
+        if w*h < 0.002*im_h*im_w:  # Noise w/ area < 0.2% of image's area
             print("code_image_cleaner/is_contour_bad(): found a tiny noise contour")
             return True
-        if x <= 1 or x >= (im_w-1) or y <= 1 or y <= (im_h-1):
+        if x <= 1 or x >= (im_w-1) or y <= 1 or y >= (im_h-1):
             if w*h < 0.005*im_h*im_w:
+                print(x, y, w, h, im_w, im_h)
                 print("code_image_cleaner/is_contour_bad(): found a sus edge-touched contour")
                 return True
     # Else, it a side code
@@ -100,7 +101,7 @@ def otsu_threshold(src_img):
     return thresh_img
 
 
-def is_it_bbwt(thresh_img, depth=2):
+def make_sure_it_bbwt(thresh_img, depth=2):
     """ Make sure the thresh img has white text on black background """
     im_h, im_w = thresh_img.shape[0:2]
     # Calculate the pixel value of image border
@@ -109,7 +110,9 @@ def is_it_bbwt(thresh_img, depth=2):
     center_pixel_value = np.sum(center_img)
     border_bw_value = (total_pixel_value - center_pixel_value) / (im_h*im_w - center_img.size)
     print("code_image_cleaner/is_it_bbwt():BBWT value:", border_bw_value)
-    return border_bw_value < 127  # If False mean not bbwt, and thresh must be invert
+    # If True mean it is not bbwt, and thresh must be invert
+    if border_bw_value > 127:
+        cv2.bitwise_not(thresh_img, thresh_img)
 
 
 def process_image_for_ocr(src_img, debug=False):
@@ -118,8 +121,7 @@ def process_image_for_ocr(src_img, debug=False):
     """
     # Binarization
     thresh = otsu_threshold(src_img)
-    if not is_it_bbwt(thresh):
-        cv2.bitwise_not(thresh, thresh)  # invert
+    make_sure_it_bbwt(thresh)
     cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # Remove noise
     clean = remove_noise(cnts, thresh, src_img, debug)
