@@ -3,6 +3,7 @@ videos/*.mp4
 
 # Ignore training data
 dataset/
+test/
 
 # Ignore YOLO .weights file
 *.weights
