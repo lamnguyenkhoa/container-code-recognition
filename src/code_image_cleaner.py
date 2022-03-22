@@ -57,9 +57,9 @@ def is_contour_bad(c, src_img):
             print("code_image_cleaner/is_contour_bad(): found a tiny noise contour")
             return True
         if x <= 1 or x >= (im_w-1) or y <= 1 or y >= (im_h-1):
-            if w*h < 0.005*im_h*im_w:
+            if w*h < 0.05*im_h*im_w:
                 print(x, y, w, h, im_w, im_h)
-                print("code_image_cleaner/is_contour_bad(): found a sus edge-touched contour")
+                print("code_image_cleaner/is_contour_bad(): found a sus edge-touched small contour")
                 return True
     # Else, it a side code
     else:
@@ -126,7 +126,7 @@ def process_image_for_ocr(src_img, debug=False):
     # Remove noise
     clean = remove_noise(cnts, thresh, src_img, debug)
     # Rotate
-    rotated = rotate_image(clean)
+    rotated = rotate_image(clean, debug)
     if debug:
         display_image_cv2(src_img, "original w/ box")
         display_image_cv2(thresh, "thresh")
@@ -137,7 +137,7 @@ def process_image_for_ocr(src_img, debug=False):
 
 def main():
     """ Test threshold and cleanup ability """
-    src_img = cv2.imread("../images/code5_fix.png")
+    src_img = cv2.imread("../images/code3.png")
     clean_img = process_image_for_ocr(src_img, True)
 
 
