@@ -1,5 +1,7 @@
 # Container Code Recognition
 
+**Status: Dropped**
+
 This project will take a video or an image and used YOLOv4 Object detection
 to detect the container codes (on the back or side of the container) and used OCR to read it into text.
 
