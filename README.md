@@ -5,6 +5,8 @@
 This project will take a video or an image and used YOLOv4 Object detection
 to detect the container codes (on the back or side of the container) and used OCR to read it into text.
 
+The project is just a tech demo in disguise and its performance is questionable. It's best suited to just explore it for educational purpose. Feel free to contact me and ask questions.
+
 Plan for improvement:
 
 - Train a better YOLO model.
